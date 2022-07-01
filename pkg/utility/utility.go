@@ -1,6 +1,8 @@
 package utility
 
 import (
+	"bufio"
+	"fmt"
 	"math/rand"
 	"os"
 	"regexp"
@@ -35,25 +37,49 @@ func AdjustLength(s string, n int) string {
 	words := strings.Fields(s)
 	if len(words) > n {
 		words = words[:n]
+		s2 := strings.Join(words, " ")
+		l := len(s2)
+		i := 0
+		lastWorld := words[n-1]
+		for i < l && i < len(s) {
+			fmt.Println(i, strings.Index(s[i:], lastWorld))
+			i = i + strings.Index(s[i:], lastWorld) + len(lastWorld)
+		}
+		if i >= len(s) {
+			return s
+		}
+		return s[:i]
+	} else {
+		return s
 	}
-	s = strings.Join(words, " ")
+}
 
-	return s
+func AdjustTrimLine(s string) string {
+	b := bufio.NewReader(strings.NewReader(s))
+	sb := strings.Builder{}
+	for {
+		l, _, err := b.ReadLine()
+		if err != nil {
+			break
+		}
+		line := strings.TrimSpace(string(l))
+		if line == "" {
+			continue
+		}
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	return strings.TrimSpace(sb.String())
 }
 
 // AdjustWhitespace replaces every group of whitespace characters with a single space charracter
 func AdjustWhitespace(s string) (string, error) {
-	reg, err := regexp.Compile(`\s+`)
-	if err != nil {
-		return "", err
-	}
-
+	reg := regexp.MustCompile(`[ \t\r]+`)
 	s = reg.ReplaceAllString(s, " ")
-
-	if s[len(s)-1] == ' ' {
-		s = s[:len(s)-1]
-	}
-	return s, nil
+	reg2 := regexp.MustCompile(`\n+`)
+	s = reg2.ReplaceAllString(s, "\n")
+	return strings.TrimSpace(s), nil
 }
 
 // RemoveNonAlpha removes all non-alphanumeric characters exept whitespace

@@ -17,6 +17,8 @@ type Flags struct {
 	MinWordLength int
 	Capital       bool
 	Punctuation   bool
+	WindowsHeight int
+	WindowsWidth  int
 }
 
 // formatText applies formatting based on flags
@@ -47,7 +49,7 @@ func (f *Flags) FormatText(s string) (string, error) {
 		f.Length = MaxLength
 	}
 	s = util.AdjustLength(s, f.Length)
-
+	s = util.AdjustTrimLine(s)
 	if !f.Capital {
 		s = strings.ToLower(s)
 	}

@@ -17,6 +17,8 @@ var (
 	minWordLength      int
 	filePath           string
 	monkeytypeLanguage string
+	windowsHeight      int
+	windowsWidth       int
 )
 
 var rootCmd = &cobra.Command{
@@ -44,6 +46,8 @@ var rootCmd = &cobra.Command{
 			MinWordLength: minWordLength,
 			Capital:       c,
 			Punctuation:   p,
+			WindowsHeight: windowsHeight,
+			WindowsWidth:  windowsWidth,
 		}
 
 		stat, err := os.Stdin.Stat()
@@ -90,6 +94,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("capital", "c", false, "true to include capital letters")
 	rootCmd.PersistentFlags().BoolP("punctuation", "p", false, "true to include punctuation")
 	rootCmd.PersistentFlags().BoolP("monkeytype", "m", false, "true to use monkeytype as a source")
+	rootCmd.PersistentFlags().IntVar(&windowsHeight, "windows-height", 100, "windows height")
+	rootCmd.PersistentFlags().IntVar(&windowsWidth, "windows-width", 60, "windows height")
 
 	if length > flags.MaxLength {
 		fmt.Println("Error: Max length value exceeded. Restoring to max length value.")

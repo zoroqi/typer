@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/maaslalani/typer/pkg/flags"
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
@@ -11,8 +12,6 @@ import (
 )
 
 const (
-	width = 60.
-
 	// charsPerWord is the average characters per word used by most typing tests
 	// to calculate your WPM score.
 	charsPerWord = 5.
@@ -38,6 +37,14 @@ type Model struct {
 	Score float64
 	// Theme is the current color theme
 	Theme *theme.Theme
+	Stat  Statistics
+	Flags flags.Flags
+}
+
+type Statistics struct {
+	b         float64
+	word      float64
+	backspace float64
 }
 
 // Init inits the bubbletea model for use
@@ -71,6 +78,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Deleting characters
 		if msg.Type == tea.KeyBackspace && len(m.Typed) > 0 {
 			m.Typed = m.Typed[:len(m.Typed)-1]
+			m.Stat.backspace++
 			return m.updateProgress()
 		}
 
@@ -80,7 +88,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		char := msg.Runes[0]
-		next := rune(m.Text[len(m.Typed)])
+		next := m.Text[len(m.Typed)]
 
 		// To properly account for line wrapping we need to always insert a new line
 		// Where the next line starts to not break the user interface, even if the user types a random character
@@ -97,14 +105,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Typed = append(m.Typed, msg.Runes...)
 
 		if char == next {
-			m.Score += 1.
+			m.Stat.b += 1.
 		}
 
 		return m.updateProgress()
 	case tea.WindowSizeMsg:
 		m.Progress.Width = msg.Width - 4
-		if m.Progress.Width > width {
-			m.Progress.Width = width
+		if m.Progress.Width > m.Flags.WindowsWidth {
+			m.Progress.Width = m.Flags.WindowsWidth
 		}
 		return m, nil
 
@@ -136,10 +144,13 @@ func (m Model) View() string {
 		m.Theme.StringColor(m.Theme.Text.Untyped, string(remaining)).Faint(),
 	)
 
+	word := float64(word(m.Typed))
 	var wpm float64
 	// Start counting wpm after at least two characters are typed
+	var bpm float64
 	if len(m.Typed) > 1 {
-		wpm = (m.Score / charsPerWord) / (time.Since(m.Start).Minutes())
+		wpm = word / (time.Since(m.Start).Minutes())
+		bpm = m.Stat.b / (time.Since(m.Start).Minutes())
 	}
 
 	if len(m.Typed) > charsPerWord {
@@ -158,6 +169,61 @@ func (m Model) View() string {
 		asciigraph.Precision(2),
 		asciigraph.SeriesColors(m.Theme.GraphColor()),
 	)
-	s += fmt.Sprintf("\n\n%s\n\nWPM: %.2f\n", graph, wpm)
+	totalTime := time.Since(m.Start).Seconds()
+	backRate := m.Stat.backspace / m.Stat.b * 100.0
+	s += fmt.Sprintf("\n\n%s\n\ntime: %.fs\nWPM: %.2f, BPM: %.2f, word count: %.2f, rune count: %.2f, backspace: %.2f, backRate: %.2f%%\n",
+		graph, totalTime, wpm, bpm, word, m.Stat.b, m.Stat.backspace, backRate)
 	return s
 }
+
+func word(input []rune) int {
+	c := 0
+	word := false
+	for _, v := range input {
+		if v > 255 {
+			c++
+			word = true
+			continue
+		}
+		if v >= '0' && v <= '9' {
+			word = true
+			continue
+		}
+		if v >= 'a' && v <= 'z' {
+			word = true
+			continue
+		}
+		if v >= 'A' && v <= 'Z' {
+			word = true
+			continue
+		}
+		if word {
+			c++
+			word = false
+		}
+	}
+	if word {
+		c++
+	}
+	return c
+}
+
+//func (m Model) subText() string {
+//	var typed string
+//
+//	tl := len(m.Text)
+//	tyl := len(m.Typed)
+//	width := m.Flags.WindowsWidth
+//	height := m.Flags.WindowsHeight
+//	rl := tl / width
+//	rty := tyl / width
+//	width := m.Flags.
+//
+//	for i, c := range m.Typed {
+//		if c == m.Text[i] {
+//			typed += m.Theme.StringColor(m.Theme.Text.Typed, string(c)).String()
+//		} else {
+//			typed += m.Theme.StringColor(m.Theme.Text.Error, string(m.Text[i])).String()
+//		}
+//	}
+//}
